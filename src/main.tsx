@@ -5,7 +5,12 @@ import './index.css'
 import App from './App.tsx'
 import { store } from './app/store.ts'
 
-createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root')
+if (rootElement === null) {
+  throw new Error('Missing #root element. index.html and main.tsx are out of sync.')
+}
+
+createRoot(rootElement).render(
   <StrictMode>
     <Provider store={store}>
       <App />
