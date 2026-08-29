@@ -1,7 +1,7 @@
 import type { Transaction } from './types'
 
 /**
- * Fixed stand-in for a transaction backend. Checked in verbatim — edit by hand, nothing
+ * Fixed stand-in for a transaction backend. Checked in verbatim; edit by hand, nothing
  * derives it. 420 rows from 2025-06-18 to 2026-07-23, spanning 14 months and all 13
  * categories, so `last30` / `last3months` / `ytd` each select a distinct slice.
  *

@@ -6,6 +6,7 @@ import { GroupingToggle } from './GroupingToggle'
 import { TransactionGroupSection } from './TransactionGroupSection'
 import { PaginationControls } from './PaginationControls'
 import { EmptyState } from './EmptyState'
+import { ErrorFallback } from '../../../components/ErrorFallback'
 
 export function TransactionListPage() {
   const queryArgs = useAppSelector(selectTransactionQueryArgs)
@@ -39,17 +40,11 @@ export function TransactionListPage() {
       </div>
 
       {isError && (
-        <div className="alert alert-danger" role="alert">
-          <p className="mb-3">
-            Could not load transactions.
-            {errorDetail !== null && (
-              <span className="block text-sm opacity-80">{errorDetail}</span>
-            )}
-          </p>
-          <button type="button" className="btn btn-secondary" onClick={() => refetch()}>
-            Try again
-          </button>
-        </div>
+        <ErrorFallback
+          title="Could not load transactions."
+          detail={errorDetail}
+          onRetry={() => refetch()}
+        />
       )}
 
       {data && data.totalItems === 0 && <EmptyState />}

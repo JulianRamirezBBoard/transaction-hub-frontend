@@ -30,7 +30,7 @@ function toIsoDateString(d: Date): string {
   return `${year}-${month}-${day}`
 }
 
-/** The Monday (UTC midnight) of the ISO week containing `d` — all week math goes through here. */
+/** The Monday (UTC midnight) of the ISO week containing `d`. All week math goes through here. */
 function getIsoWeekStart(d: Date): Date {
   const dayOfWeek = d.getUTCDay() // 0 = Sunday .. 6 = Saturday
   const offsetToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek

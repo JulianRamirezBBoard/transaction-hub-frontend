@@ -50,7 +50,7 @@ export function applyFilters(transactions: Transaction[], filters: FiltersState)
 
   const predicates: ((txn: Transaction) => boolean)[] = []
 
-  // Date range predicate — bounds are inclusive.
+  // Date range predicate. Bounds inclusive.
   if (dateRange.startDate || dateRange.endDate) {
     predicates.push((txn) => {
       if (dateRange.startDate && txn.date < dateRange.startDate) return false
@@ -59,12 +59,12 @@ export function applyFilters(transactions: Transaction[], filters: FiltersState)
     })
   }
 
-  // Categories predicate — always a union within the list, regardless of the global AND/OR logic.
+  // Categories predicate. Always a union within the list, regardless of the global AND/OR logic.
   if (categories.length > 0) {
     predicates.push((txn) => categories.includes(txn.category))
   }
 
-  // Amount range predicate — bounds are inclusive.
+  // Amount range predicate. Bounds inclusive.
   if (amountRange.min !== null || amountRange.max !== null) {
     predicates.push((txn) => {
       if (amountRange.min !== null && txn.amount < amountRange.min) return false
@@ -122,7 +122,7 @@ export function groupTransactions(
 
   for (const group of groups.values()) {
     const { transactions: rows } = group
-    // The last running total already is the period sum — no second pass needed.
+    // The last running total already is the period sum. No second pass needed.
     const totalAmount = rows[rows.length - 1].runningTotal
     group.summary.transactionCount = rows.length
     group.summary.totalAmount = totalAmount

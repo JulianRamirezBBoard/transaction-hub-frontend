@@ -59,7 +59,7 @@ export function makeRow(
   }
 }
 
-/** Which rows came back, in order — what most assertions actually care about. */
+/** Which rows came back, in order: what most assertions actually care about. */
 export const idsOf = (rows: { id: string }[]) => rows.map((row) => row.id)
 
 interface PipelineOptions {

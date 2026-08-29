@@ -86,7 +86,7 @@ describe('Full pipeline integration', () => {
 
 /**
  * Regression cover for the `continued` marker. The flag must describe *this* group's own
- * first row, not the first row of the page — otherwise every group after the first on a
+ * first row, not the first row of the page. Otherwise every group after the first on a
  * page is wrongly labelled "(continued)".
  */
 describe('continued marker', () => {

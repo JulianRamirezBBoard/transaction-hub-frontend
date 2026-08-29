@@ -97,7 +97,7 @@ export const transactionsSlice = createSlice({
       state.pagination.page = 1
     },
 
-    /** Resets the filters only — the user's grouping and page-size choices are preserved. */
+    /** Resets the filters only. Grouping and page-size choices are preserved. */
     clearAllFilters: (state) => {
       state.filters = initialFiltersState
       state.pagination.page = 1

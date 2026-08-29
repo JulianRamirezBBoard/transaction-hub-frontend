@@ -1,7 +1,8 @@
 # Line endings are normalized to LF in the repository *and* in every working
 # tree, regardless of the contributor's core.autocrlf setting. Prettier writes
-# LF, so without `eol=lf` a Windows checkout would produce CRLF files that the
-# formatter immediately rewrites — churning diffs and breaking the husky hook.
+# LF. Without `eol=lf`, a Windows checkout would produce CRLF files. The
+# formatter would then rewrite them right away, churning diffs and breaking
+# the husky hook.
 * text=auto eol=lf
 
 # Binary assets: never inspect, never convert.
