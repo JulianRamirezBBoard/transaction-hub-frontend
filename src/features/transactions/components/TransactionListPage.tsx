@@ -18,7 +18,9 @@ export function TransactionListPage() {
 
   const errorDetail = isError ? describeError(error) : null
 
-  // The polite region always mounts a string. The alert owns the error wording, so stay quiet there.
+  // Text for the polite role="status" span below. The span stays mounted so a
+  // text change is announced reliably. First load (visible loader) and error
+  // (role="alert" panel) speak elsewhere, so leave the message empty for both.
   let statusMessage = ''
   if (isFetching && !isLoading) {
     statusMessage = 'Updating transactions'
