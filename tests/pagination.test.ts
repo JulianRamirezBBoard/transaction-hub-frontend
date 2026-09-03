@@ -7,7 +7,7 @@ import type {
 import { PAGE_SIZE_OPTIONS } from '../src/features/transactions/types'
 import { makeRow } from './helpers'
 
-function createRows(count: number): TransactionWithRunningTotal[] {
+const createRows = (count: number): TransactionWithRunningTotal[] => {
   return Array.from({ length: count }, (_, i) =>
     makeRow({ id: `txn-${i + 1}`, runningTotal: -(50 * (i + 1)) }),
   )

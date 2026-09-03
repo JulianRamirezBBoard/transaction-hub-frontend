@@ -5,7 +5,11 @@ import { AmountFilter } from '../src/features/transactions/components/AmountFilt
 import { GroupingToggle } from '../src/features/transactions/components/GroupingToggle'
 import { FilterLogicToggle } from '../src/features/transactions/components/FilterLogicToggle'
 import { FilterPanel } from '../src/features/transactions/components/FilterPanel'
+import { ClearFiltersButton } from '../src/features/transactions/components/ClearFiltersButton'
+import { EmptyState } from '../src/features/transactions/components/EmptyState'
+import { DebouncedInput } from '../src/components/DebouncedInput'
 import { ErrorBoundary } from '../src/components/ErrorBoundary'
+import { ErrorFallback } from '../src/components/ErrorFallback'
 import { renderWithStore } from './renderWithStore'
 import { makeState } from './helpers'
 
@@ -14,11 +18,16 @@ describe('CategoryFilter', () => {
     const { user } = renderWithStore(<CategoryFilter />)
     const toggle = screen.getByRole('button', { expanded: false })
 
+    // aria-controls only points at the panel while the panel exists in the DOM.
+    expect(toggle).not.toHaveAttribute('aria-controls')
+
     await user.click(toggle)
     expect(screen.getByRole('group', { name: 'Category options' })).toBeInTheDocument()
+    expect(toggle).toHaveAttribute('aria-controls', 'category-filter-panel')
 
     await user.click(toggle)
     expect(screen.queryByRole('group', { name: 'Category options' })).not.toBeInTheDocument()
+    expect(toggle).not.toHaveAttribute('aria-controls')
   })
 
   it('closes on Escape and returns focus to the toggle', async () => {
@@ -145,6 +154,31 @@ describe('PaginationControls', () => {
     renderControls(1)
     expect(screen.getByRole('button', { name: 'Go to previous page' })).toBeDisabled()
   })
+
+  it('steps to the next page when Next is clicked', async () => {
+    const { user, store } = renderControls(2)
+
+    await user.click(screen.getByRole('button', { name: 'Go to next page' }))
+
+    expect(store.getState().transactions.pagination.page).toBe(3)
+  })
+
+  it('steps to the previous page when Previous is clicked', async () => {
+    const { user, store } = renderControls(3)
+
+    await user.click(screen.getByRole('button', { name: 'Go to previous page' }))
+
+    expect(store.getState().transactions.pagination.page).toBe(2)
+  })
+
+  it('records a new page size and returns to page 1', async () => {
+    const { user, store } = renderControls(3)
+
+    await user.selectOptions(screen.getByLabelText('Rows per page:'), '50')
+
+    expect(store.getState().transactions.pagination.pageSize).toBe(50)
+    expect(store.getState().transactions.pagination.page).toBe(1)
+  })
 })
 
 describe('AmountFilter', () => {
@@ -189,6 +223,34 @@ describe('AmountFilter', () => {
     expect(screen.getByLabelText('Min')).toHaveValue(-100)
     expect(store.getState().transactions.filters.amountRange.min).toBe(-100)
   })
+
+  it('clears the stored bound when the field is emptied', () => {
+    jest.useFakeTimers()
+    try {
+      const { store } = renderWithStore(
+        <AmountFilter />,
+        makeState({
+          filters: {
+            logic: 'AND',
+            dateRange: { preset: null, startDate: null, endDate: null },
+            categories: [],
+            amountRange: { min: -100, max: null },
+          },
+        }),
+      )
+
+      act(() => {
+        fireEvent.change(screen.getByLabelText('Min'), { target: { value: '' } })
+      })
+      act(() => {
+        jest.runAllTimers()
+      })
+
+      expect(store.getState().transactions.filters.amountRange.min).toBeNull()
+    } finally {
+      jest.useRealTimers()
+    }
+  })
 })
 
 describe('GroupingToggle', () => {
@@ -214,7 +276,8 @@ describe('RadioPillGroup', () => {
   it('names the group and marks only the selected option as checked', async () => {
     const { user, store } = renderWithStore(<FilterLogicToggle />)
 
-    const group = screen.getByRole('group', { name: 'Filter logic' })
+    // The parent <fieldset> + <legend> is the single group; RadioPillGroup no longer adds its own.
+    const group = screen.getByRole('group', { name: 'Filter Logic' })
     expect(within(group).getAllByRole('radio')).toHaveLength(2)
     expect(within(group).getByRole('radio', { name: /AND/ })).toBeChecked()
 
@@ -236,6 +299,43 @@ describe('FilterPanel', () => {
 
     expect(submitEvent.defaultPrevented).toBe(true)
   })
+
+  const clearButton = () => screen.queryByRole('button', { name: /clear all filters/i })
+
+  it('hides the Clear control when nothing narrows the results', () => {
+    renderWithStore(<FilterPanel />)
+    expect(clearButton()).not.toBeInTheDocument()
+  })
+
+  it('still hides the Clear control for the "Custom" preset with no dates set', () => {
+    renderWithStore(
+      <FilterPanel />,
+      makeState({
+        filters: {
+          logic: 'AND',
+          dateRange: { preset: 'custom', startDate: null, endDate: null },
+          categories: [],
+          amountRange: { min: null, max: null },
+        },
+      }),
+    )
+    expect(clearButton()).not.toBeInTheDocument()
+  })
+
+  it('shows the Clear control once a real filter is active', () => {
+    renderWithStore(
+      <FilterPanel />,
+      makeState({
+        filters: {
+          logic: 'AND',
+          dateRange: { preset: 'custom', startDate: '2026-07-01', endDate: null },
+          categories: [],
+          amountRange: { min: null, max: null },
+        },
+      }),
+    )
+    expect(clearButton()).toBeInTheDocument()
+  })
 })
 
 describe('ErrorBoundary', () => {
@@ -248,7 +348,9 @@ describe('ErrorBoundary', () => {
     let shouldThrow = true
 
     function Subject() {
-      if (shouldThrow) return <Boom />
+      if (shouldThrow) {
+        return <Boom />
+      }
       return <p>recovered</p>
     }
 
@@ -274,5 +376,107 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('recovered')).toBeInTheDocument()
 
     consoleError.mockRestore()
+  })
+})
+
+describe('DebouncedInput', () => {
+  it('shows a value changed elsewhere without waiting for the debounce', () => {
+    const onCommit = jest.fn()
+    const { rerender } = renderWithStore(
+      <DebouncedInput id="x" label="Amount" type="number" value="10" onCommit={onCommit} />,
+    )
+
+    expect(screen.getByLabelText('Amount')).toHaveValue(10)
+
+    rerender(<DebouncedInput id="x" label="Amount" type="number" value="99" onCommit={onCommit} />)
+
+    expect(screen.getByLabelText('Amount')).toHaveValue(99)
+    // An external sync must not echo back as a commit.
+    expect(onCommit).not.toHaveBeenCalled()
+  })
+
+  it('commits null once the field is cleared and typing settles', () => {
+    jest.useFakeTimers()
+    try {
+      const onCommit = jest.fn()
+      renderWithStore(
+        <DebouncedInput id="x" label="Amount" type="number" value="10" onCommit={onCommit} />,
+      )
+
+      act(() => {
+        fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '' } })
+      })
+      act(() => {
+        jest.runAllTimers()
+      })
+
+      expect(onCommit).toHaveBeenCalledWith(null)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+})
+
+describe('ClearFiltersButton', () => {
+  it('resets every filter dimension in the store', async () => {
+    const { user, store } = renderWithStore(
+      <ClearFiltersButton />,
+      makeState({
+        filters: {
+          logic: 'OR',
+          dateRange: { preset: 'custom', startDate: '2026-07-01', endDate: '2026-07-31' },
+          categories: ['Groceries'],
+          amountRange: { min: -100, max: null },
+        },
+      }),
+    )
+
+    await user.click(screen.getByRole('button', { name: /clear all filters/i }))
+
+    expect(store.getState().transactions.filters).toEqual(makeState().filters)
+  })
+})
+
+describe('EmptyState', () => {
+  it('tells the user nothing matched and offers to clear the filters', () => {
+    renderWithStore(<EmptyState />)
+
+    expect(screen.getByText('No transactions found')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /clear all filters/i })).toBeInTheDocument()
+  })
+})
+
+describe('ErrorFallback', () => {
+  it('announces itself, takes focus, and shows the detail when there is one', () => {
+    renderWithStore(
+      <ErrorFallback
+        title="Could not load transactions."
+        detail="Server exploded"
+        onRetry={() => {}}
+      />,
+    )
+
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveFocus()
+    expect(within(alert).getByText(/Server exploded/)).toBeInTheDocument()
+  })
+
+  it('hides the detail line when the detail is null', () => {
+    renderWithStore(
+      <ErrorFallback title="Could not load transactions." detail={null} onRetry={() => {}} />,
+    )
+
+    expect(screen.queryByText(/Details:/)).not.toBeInTheDocument()
+  })
+
+  it('calls onRetry when the button is clicked', async () => {
+    const onRetry = jest.fn()
+    const { user } = renderWithStore(
+      <ErrorFallback title="Could not load transactions." detail={null} onRetry={onRetry} />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+
+    expect(onRetry).toHaveBeenCalledTimes(1)
   })
 })

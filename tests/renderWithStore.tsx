@@ -9,7 +9,7 @@ import type { TransactionsState } from '../src/features/transactions/types'
  * Renders against a real store built by the app's own factory, so tests exercise the same
  * wiring the app uses. Returns the store for asserting on resulting state.
  */
-export function renderWithStore(ui: ReactElement, preloadedTransactions?: TransactionsState) {
+export const renderWithStore = (ui: ReactElement, preloadedTransactions?: TransactionsState) => {
   const store = createAppStore(preloadedTransactions)
 
   const wrapper = ({ children }: { children: ReactNode }) => (

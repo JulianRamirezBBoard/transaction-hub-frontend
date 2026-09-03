@@ -1,6 +1,8 @@
 import { useAppSelector } from '../../../app/hooks'
 import { useGetTransactionsQuery } from '../transactionsApi'
-import { selectTransactionQueryArgs } from '../selectors'
+import { selectTransactionQueryArgs, selectPagination } from '../selectors'
+import { describeError } from '../describeError'
+import { getPageItemRange } from '../logic'
 import { FilterPanel } from './FilterPanel'
 import { GroupingToggle } from './GroupingToggle'
 import { TransactionGroupSection } from './TransactionGroupSection'
@@ -10,10 +12,22 @@ import { ErrorFallback } from '../../../components/ErrorFallback'
 
 export function TransactionListPage() {
   const queryArgs = useAppSelector(selectTransactionQueryArgs)
+  const { pageSize } = useAppSelector(selectPagination)
   const { data, isLoading, isFetching, isError, error, refetch } =
     useGetTransactionsQuery(queryArgs)
 
   const errorDetail = isError ? describeError(error) : null
+
+  // Text for the polite role="status" span below. The span stays mounted so a
+  // text change is announced reliably. First load (visible loader) and error
+  // (role="alert" panel) speak elsewhere, so leave the message empty for both.
+  let statusMessage = ''
+  if (isFetching && !isLoading) {
+    statusMessage = 'Updating transactions'
+  } else if (data && !isError) {
+    const { startItem, endItem } = getPageItemRange(data.page, pageSize, data.totalItems)
+    statusMessage = `Showing ${startItem} to ${endItem} of ${data.totalItems} transactions`
+  }
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -31,13 +45,21 @@ export function TransactionListPage() {
         <GroupingToggle />
       </section>
 
-      <div role="status" aria-live="polite" aria-busy={isFetching}>
-        {isLoading && (
+      <div role="status" aria-live="polite">
+        {isLoading ? (
           <div className="alert alert-info">
             <div className="animate-pulse">Loading transactions...</div>
           </div>
+        ) : (
+          <span className="sr-only">{statusMessage}</span>
         )}
       </div>
+
+      {!isLoading && isFetching && (
+        <p className="text-sm text-gray-500 animate-pulse" aria-hidden="true">
+          Updating...
+        </p>
+      )}
 
       {isError && (
         <ErrorFallback
@@ -70,12 +92,4 @@ export function TransactionListPage() {
       )}
     </div>
   )
-}
-
-/** Pulls a human-readable message out of an RTK Query error without assuming its shape. */
-function describeError(error: unknown): string | null {
-  if (error === null || typeof error !== 'object') return null
-  if ('error' in error && typeof error.error === 'string') return error.error
-  if ('message' in error && typeof error.message === 'string') return error.message
-  return null
 }

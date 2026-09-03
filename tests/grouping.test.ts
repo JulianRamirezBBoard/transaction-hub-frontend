@@ -204,3 +204,24 @@ describe('flattenGroups', () => {
     expect(idsOf(flattenGroups(groups))).toEqual(['txn-2', 'txn-1'])
   })
 })
+
+describe('running totals stay on whole cents', () => {
+  it('does not let a chained float sum drift off a cent', () => {
+    // -0.1 + -0.2 + -0.3 is -0.6000000000000001 as a naive chained float sum.
+    const groups = groupTransactions(
+      [
+        makeTransaction({ id: 'txn-1', date: '2026-07-01', amount: -0.1 }),
+        makeTransaction({ id: 'txn-2', date: '2026-07-02', amount: -0.2 }),
+        makeTransaction({ id: 'txn-3', date: '2026-07-03', amount: -0.3 }),
+      ],
+      'monthly',
+    )
+
+    const group = groups.get('2026-07')
+    const rows = group?.transactions ?? []
+
+    expect(rows.map((row) => row.runningTotal)).toEqual([-0.1, -0.3, -0.6])
+    expect(group?.summary.totalAmount).toBe(-0.6)
+    expect(group?.summary.averageAmount).toBe(-0.2)
+  })
+})

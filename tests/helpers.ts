@@ -17,7 +17,7 @@ import type {
 } from '../src/features/transactions/types'
 
 /** Filters with nothing active; spread overrides on top for the dimension under test. */
-export function makeFilters(overrides: Partial<FiltersState> = {}): FiltersState {
+export const makeFilters = (overrides: Partial<FiltersState> = {}): FiltersState => {
   return {
     logic: 'AND',
     dateRange: { preset: null, startDate: null, endDate: null },
@@ -27,7 +27,7 @@ export function makeFilters(overrides: Partial<FiltersState> = {}): FiltersState
   }
 }
 
-export function makeState(overrides: Partial<TransactionsState> = {}): TransactionsState {
+export const makeState = (overrides: Partial<TransactionsState> = {}): TransactionsState => {
   return {
     filters: makeFilters(),
     grouping: 'monthly',
@@ -36,7 +36,7 @@ export function makeState(overrides: Partial<TransactionsState> = {}): Transacti
   }
 }
 
-export function makeTransaction(overrides: Partial<Transaction> & { id: string }): Transaction {
+export const makeTransaction = (overrides: Partial<Transaction> & { id: string }): Transaction => {
   return {
     date: '2026-07-15',
     description: 'Test',
@@ -47,9 +47,9 @@ export function makeTransaction(overrides: Partial<Transaction> & { id: string }
 }
 
 /** A transaction as it looks after grouping, for tests that start downstream. */
-export function makeRow(
+export const makeRow = (
   overrides: Partial<TransactionWithRunningTotal> & { id: string },
-): TransactionWithRunningTotal {
+): TransactionWithRunningTotal => {
   const { runningTotal, periodKey, ...transaction } = overrides
 
   return {
@@ -80,7 +80,7 @@ interface PipelineResult {
 }
 
 /** Runs the same sequence the API layer does, so tests exercise the real composition. */
-export function runPipeline(
+export const runPipeline = (
   transactions: Transaction[],
   {
     filters = makeFilters(),
@@ -88,7 +88,7 @@ export function runPipeline(
     pagination = { page: 1, pageSize: 25 },
     now = new Date('2026-07-23T00:00:00Z'),
   }: PipelineOptions = {},
-): PipelineResult {
+): PipelineResult => {
   const filtered = applyFilters(transactions, resolveFilters(filters, now))
   const groups = groupTransactions(filtered, grouping)
   const flatRows = flattenGroups(groups)

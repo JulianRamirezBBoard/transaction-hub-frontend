@@ -15,6 +15,7 @@ export function FilterLogicToggle() {
       <RadioPillGroup
         name="filterLogic"
         label="Filter logic"
+        standalone={false}
         options={FILTER_LOGIC_OPTIONS}
         value={filters.logic}
         onChange={(option) => dispatch(setFilterLogic(option))}

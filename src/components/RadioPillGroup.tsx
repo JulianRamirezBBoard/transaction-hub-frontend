@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import type { ReactNode } from 'react'
 
 interface RadioPillGroupProps<T extends string> {
@@ -5,6 +6,8 @@ interface RadioPillGroupProps<T extends string> {
   name: string
   /** Accessible name for the group. */
   label: string
+  /** False when a parent `<fieldset>` + `<legend>` already groups and names these controls. */
+  standalone?: boolean
   options: readonly T[]
   value: T | null
   onChange: (option: T) => void
@@ -20,16 +23,21 @@ interface RadioPillGroupProps<T extends string> {
 export function RadioPillGroup<T extends string>({
   name,
   label,
+  standalone = true,
   options,
   value,
   onChange,
   getLabel,
   getShortLabel,
 }: RadioPillGroupProps<T>) {
+  // Prefix with a render-unique id so two groups that share a `name` never collide on `id`.
+  const idPrefix = useId()
+  const groupProps = standalone ? { role: 'group' as const, 'aria-label': label } : {}
+
   return (
-    <div className="grid grid-cols-2 sm:flex sm:gap-2 gap-2" role="group" aria-label={label}>
+    <div className="grid grid-cols-2 sm:flex sm:gap-2 gap-2" {...groupProps}>
       {options.map((option) => {
-        const id = `${name}-${option.toLowerCase()}`
+        const id = `${idPrefix}${name}-${option.toLowerCase()}`
         const isSelected = value === option
 
         return (
