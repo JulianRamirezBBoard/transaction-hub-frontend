@@ -16,7 +16,9 @@ export function CategoryFilter() {
 
   // Escape restores focus to the toggle, so keyboard users aren't stranded at the document end.
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) {
+      return
+    }
 
     const closeAndRestoreFocus = () => {
       setIsOpen(false)
@@ -58,7 +60,7 @@ export function CategoryFilter() {
           type="button"
           onClick={() => setIsOpen((open) => !open)}
           aria-expanded={isOpen}
-          aria-controls={PANEL_ID}
+          aria-controls={isOpen ? PANEL_ID : undefined}
           aria-label={`Select transaction categories, ${summary}`}
         >
           {summary}

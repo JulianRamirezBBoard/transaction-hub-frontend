@@ -1,9 +1,10 @@
-import { useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../../../app/hooks'
 import { selectPagination } from '../selectors'
 import { setPage, setPageSize } from '../transactionsSlice'
 import { PAGE_SIZE_OPTIONS, isPageSizeOption } from '../types'
-import { useDebouncedCallback } from '../../../hooks/useDebouncedCallback'
+import { parseNumberOrNull } from '../format'
+import { getPageItemRange } from '../logic'
+import { useDebouncedDraft } from '../../../hooks/useDebouncedDraft'
 
 const PAGE_INPUT_DELAY_MS = 300
 
@@ -19,28 +20,19 @@ export function PaginationControls({ page, totalPages, totalItems }: PaginationC
   const { pageSize } = useAppSelector(selectPagination)
 
   // The field keeps its own draft so it can be cleared mid-edit instead of snapping back.
-  const [draft, setDraft] = useState<string | null>(null)
-  const [syncedPage, setSyncedPage] = useState(page)
-  if (page !== syncedPage) {
-    setSyncedPage(page)
-    setDraft(null)
-  }
-
-  const startItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1
-  const endItem = Math.min(page * pageSize, totalItems)
-
   // Debounced so typing "12" doesn't commit page 1 on the way. Invalid drafts never commit.
-  const commitPage = useDebouncedCallback((value: string) => {
-    const parsed = Number.parseInt(value, 10)
-    if (Number.isFinite(parsed) && parsed >= 1 && parsed <= totalPages) {
-      dispatch(setPage(parsed))
-    }
-  }, PAGE_INPUT_DELAY_MS)
+  const { draft, setDraft, resetDraft } = useDebouncedDraft<number, string | null>(
+    page,
+    (value) => {
+      const parsed = parseNumberOrNull(value)
+      if (parsed !== null && Number.isInteger(parsed) && parsed >= 1 && parsed <= totalPages) {
+        dispatch(setPage(parsed))
+      }
+    },
+    { delayMs: PAGE_INPUT_DELAY_MS, toDraft: () => null },
+  )
 
-  const handleDraftChange = (value: string) => {
-    setDraft(value)
-    commitPage(value)
-  }
+  const { startItem, endItem } = getPageItemRange(page, pageSize, totalItems)
 
   return (
     <nav aria-label="Pagination" className="card">
@@ -70,8 +62,8 @@ export function PaginationControls({ page, totalPages, totalItems }: PaginationC
                 min={1}
                 max={totalPages}
                 value={draft ?? String(page)}
-                onChange={(e) => handleDraftChange(e.target.value)}
-                onBlur={() => setDraft(null)}
+                onChange={(e) => setDraft(e.target.value)}
+                onBlur={() => resetDraft()}
                 aria-label="Current page number"
               />
               <span className="text-sm text-gray-600 whitespace-nowrap">of {totalPages}</span>
@@ -99,8 +91,8 @@ export function PaginationControls({ page, totalPages, totalItems }: PaginationC
               className="form-select"
               value={pageSize}
               onChange={(e) => {
-                const newSize = Number.parseInt(e.target.value, 10)
-                if (isPageSizeOption(newSize)) {
+                const newSize = parseNumberOrNull(e.target.value)
+                if (newSize !== null && isPageSizeOption(newSize)) {
                   dispatch(setPageSize(newSize))
                 }
               }}
@@ -113,7 +105,7 @@ export function PaginationControls({ page, totalPages, totalItems }: PaginationC
             </select>
           </div>
 
-          <div className="text-sm text-gray-700 text-center sm:text-left" role="status">
+          <div className="text-sm text-gray-700 text-center sm:text-left">
             Showing{' '}
             <strong>
               {startItem}-{endItem}

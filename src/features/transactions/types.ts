@@ -35,7 +35,7 @@ export type DatePreset = (typeof DATE_PRESETS)[number]
 /** Presets that resolve to a date range relative to "now"; `custom` carries explicit dates instead. */
 export type RelativeDatePreset = Exclude<DatePreset, 'custom'>
 
-export function isRelativeDatePreset(preset: DatePreset): preset is RelativeDatePreset {
+export const isRelativeDatePreset = (preset: DatePreset): preset is RelativeDatePreset => {
   return preset !== 'custom'
 }
 
@@ -87,7 +87,7 @@ export const GROUPING_PERIOD_LABELS: Record<GroupingPeriod, string> = {
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const
 export type PageSizeOption = (typeof PAGE_SIZE_OPTIONS)[number]
 
-export function isPageSizeOption(value: number): value is PageSizeOption {
+export const isPageSizeOption = (value: number): value is PageSizeOption => {
   return (PAGE_SIZE_OPTIONS as readonly number[]).includes(value)
 }
 
@@ -143,8 +143,7 @@ export interface TransactionsQueryResult {
   page: number
 }
 
-export const TRANSACTION_KINDS = ['income', 'expense', 'neutral'] as const
-export type TransactionKind = (typeof TRANSACTION_KINDS)[number]
+export type TransactionKind = 'income' | 'expense' | 'neutral'
 
 export interface TransactionsState {
   filters: FiltersState

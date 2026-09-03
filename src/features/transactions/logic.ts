@@ -11,9 +11,23 @@ import type {
 import { isRelativeDatePreset } from './types'
 import { computePresetRange, getPeriodKey, getPeriodLabel } from './dateUtils'
 
-export function getTransactionKind(amount: number): TransactionKind {
-  if (amount > 0) return 'income'
-  if (amount < 0) return 'expense'
+/**
+ * Rounds a money value to whole cents. Used to keep a chained running-total sum from drifting
+ * into fractions of a cent, and to trim a computed average to a displayable value. Rounds half
+ * away from zero, so a value and its negative round to the same magnitude.
+ */
+const roundToCents = (amount: number): number => {
+  const sign = amount < 0 ? -1 : 1
+  return (sign * Math.round(Math.abs(amount) * 100)) / 100
+}
+
+export const getTransactionKind = (amount: number): TransactionKind => {
+  if (amount > 0) {
+    return 'income'
+  }
+  if (amount < 0) {
+    return 'expense'
+  }
   return 'neutral'
 }
 
@@ -21,7 +35,7 @@ export function getTransactionKind(amount: number): TransactionKind {
  * Turns a relative preset into the concrete bounds `applyFilters` needs. Done at query time,
  * so a preset can't go stale while the app sits open; `now` is injected to stay deterministic.
  */
-export function resolveFilters(filters: FiltersState, now: Date): FiltersState {
+export const resolveFilters = (filters: FiltersState, now: Date): FiltersState => {
   const { preset } = filters.dateRange
   if (preset === null || !isRelativeDatePreset(preset)) {
     return filters
@@ -32,20 +46,19 @@ export function resolveFilters(filters: FiltersState, now: Date): FiltersState {
 }
 
 /** True when any dimension would narrow the result set. Here, not in the UI, so it means one thing. */
-export function hasActiveFilters(filters: FiltersState): boolean {
+export const hasActiveFilters = (filters: FiltersState): boolean => {
   const { dateRange, categories, amountRange } = filters
 
-  return (
-    dateRange.preset !== null ||
+  // A relative preset always narrows. "Custom" with no dates set does not, so it does not count.
+  const dateActive =
+    (dateRange.preset !== null && isRelativeDatePreset(dateRange.preset)) ||
     dateRange.startDate !== null ||
-    dateRange.endDate !== null ||
-    categories.length > 0 ||
-    amountRange.min !== null ||
-    amountRange.max !== null
-  )
+    dateRange.endDate !== null
+
+  return dateActive || categories.length > 0 || amountRange.min !== null || amountRange.max !== null
 }
 
-export function applyFilters(transactions: Transaction[], filters: FiltersState): Transaction[] {
+export const applyFilters = (transactions: Transaction[], filters: FiltersState): Transaction[] => {
   const { logic, dateRange, categories, amountRange } = filters
 
   const predicates: ((txn: Transaction) => boolean)[] = []
@@ -53,8 +66,12 @@ export function applyFilters(transactions: Transaction[], filters: FiltersState)
   // Date range predicate. Bounds inclusive.
   if (dateRange.startDate || dateRange.endDate) {
     predicates.push((txn) => {
-      if (dateRange.startDate && txn.date < dateRange.startDate) return false
-      if (dateRange.endDate && txn.date > dateRange.endDate) return false
+      if (dateRange.startDate && txn.date < dateRange.startDate) {
+        return false
+      }
+      if (dateRange.endDate && txn.date > dateRange.endDate) {
+        return false
+      }
       return true
     })
   }
@@ -67,8 +84,12 @@ export function applyFilters(transactions: Transaction[], filters: FiltersState)
   // Amount range predicate. Bounds inclusive.
   if (amountRange.min !== null || amountRange.max !== null) {
     predicates.push((txn) => {
-      if (amountRange.min !== null && txn.amount < amountRange.min) return false
-      if (amountRange.max !== null && txn.amount > amountRange.max) return false
+      if (amountRange.min !== null && txn.amount < amountRange.min) {
+        return false
+      }
+      if (amountRange.max !== null && txn.amount > amountRange.max) {
+        return false
+      }
       return true
     })
   }
@@ -86,12 +107,14 @@ export function applyFilters(transactions: Transaction[], filters: FiltersState)
  * Buckets transactions into chronological periods, with a running total that resets at each
  * boundary. Summaries are computed over the whole period so pagination can't distort them.
  */
-export function groupTransactions(
+export const groupTransactions = (
   transactions: Transaction[],
   period: GroupingPeriod,
-): Map<string, TransactionGroup> {
+): Map<string, TransactionGroup> => {
   const sorted = [...transactions].sort((a, b) => {
-    if (a.date !== b.date) return a.date.localeCompare(b.date)
+    if (a.date !== b.date) {
+      return a.date.localeCompare(b.date)
+    }
     return a.id.localeCompare(b.id)
   })
 
@@ -117,7 +140,8 @@ export function groupTransactions(
     }
 
     const previousTotal = group.transactions[group.transactions.length - 1]?.runningTotal ?? 0
-    group.transactions.push({ ...txn, runningTotal: previousTotal + txn.amount, periodKey })
+    const runningTotal = roundToCents(previousTotal + txn.amount)
+    group.transactions.push({ ...txn, runningTotal, periodKey })
   }
 
   for (const group of groups.values()) {
@@ -126,15 +150,15 @@ export function groupTransactions(
     const totalAmount = rows[rows.length - 1].runningTotal
     group.summary.transactionCount = rows.length
     group.summary.totalAmount = totalAmount
-    group.summary.averageAmount = totalAmount / rows.length
+    group.summary.averageAmount = roundToCents(totalAmount / rows.length)
   }
 
   return groups
 }
 
-export function flattenGroups(
+export const flattenGroups = (
   groups: Map<string, TransactionGroup>,
-): TransactionWithRunningTotal[] {
+): TransactionWithRunningTotal[] => {
   const flattened: TransactionWithRunningTotal[] = []
   for (const group of groups.values()) {
     flattened.push(...group.transactions)
@@ -142,10 +166,41 @@ export function flattenGroups(
   return flattened
 }
 
-export function paginate(
+/** Single source of truth for what counts as a valid page number. */
+export const clampPage = (page: number, totalPages: number): number => {
+  if (!Number.isFinite(page)) {
+    return 1
+  }
+  return Math.max(1, Math.min(Math.trunc(page), Math.max(1, totalPages)))
+}
+
+/**
+ * The lower half of the page-number rule: an integer, at least 1. The reducer calls this
+ * because it cannot know `totalPages`; `paginate` still applies the upper bound.
+ */
+export const normalizePageInput = (page: number): number => {
+  return clampPage(page, Number.POSITIVE_INFINITY)
+}
+
+/** The 1-based row range shown on the current page, for "Showing X to Y of Z" text. */
+export const getPageItemRange = (
+  page: number,
+  pageSize: number,
+  totalItems: number,
+): { startItem: number; endItem: number } => {
+  if (totalItems === 0) {
+    return { startItem: 0, endItem: 0 }
+  }
+  return {
+    startItem: (page - 1) * pageSize + 1,
+    endItem: Math.min(page * pageSize, totalItems),
+  }
+}
+
+export const paginate = (
   items: TransactionWithRunningTotal[],
   pagination: PaginationState,
-): { items: TransactionWithRunningTotal[]; page: number; totalPages: number } {
+): { items: TransactionWithRunningTotal[]; page: number; totalPages: number } => {
   const totalPages = Math.max(1, Math.ceil(items.length / pagination.pageSize))
   const page = clampPage(pagination.page, totalPages)
   const startIdx = (page - 1) * pagination.pageSize
@@ -157,21 +212,15 @@ export function paginate(
   }
 }
 
-/** Single source of truth for what counts as a valid page number. */
-export function clampPage(page: number, totalPages: number): number {
-  if (!Number.isFinite(page)) return 1
-  return Math.max(1, Math.min(Math.trunc(page), Math.max(1, totalPages)))
-}
-
 /**
  * Reconstructs the period groups visible on the current page. Rows arrive tagged with
  * `periodKey` and contiguous by period, so this is one linear pass with O(1) lookups, and
  * each group keeps its full-period summary rather than one derived from the page slice.
  */
-export function buildPageGroups(
+export const buildPageGroups = (
   groups: Map<string, TransactionGroup>,
   pageSlice: TransactionWithRunningTotal[],
-): TransactionGroupPage[] {
+): TransactionGroupPage[] => {
   const pageGroups: TransactionGroupPage[] = []
 
   for (const txn of pageSlice) {
@@ -183,7 +232,9 @@ export function buildPageGroups(
     }
 
     const fullGroup = groups.get(txn.periodKey)
-    if (!fullGroup) continue
+    if (!fullGroup) {
+      continue
+    }
 
     pageGroups.push({
       summary: fullGroup.summary,

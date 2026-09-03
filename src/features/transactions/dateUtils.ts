@@ -17,13 +17,22 @@ const MONTH_NAMES = [
   'December',
 ] as const
 
-/** Parses an ISO `YYYY-MM-DD` string as a UTC midnight instant. */
-function parseIsoDate(date: string): Date {
-  return new Date(`${date}T00:00:00Z`)
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
+/** Parses an ISO `YYYY-MM-DD` string as a UTC midnight instant. Rejects any other shape. */
+const parseIsoDate = (date: string): Date => {
+  if (!ISO_DATE_PATTERN.test(date)) {
+    throw new Error(`Invalid date "${date}": expected the format YYYY-MM-DD.`)
+  }
+  const parsed = new Date(`${date}T00:00:00Z`)
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`Invalid date "${date}": that calendar date does not exist.`)
+  }
+  return parsed
 }
 
 /** Formats a Date as an ISO `YYYY-MM-DD` string in UTC. */
-function toIsoDateString(d: Date): string {
+const toIsoDateString = (d: Date): string => {
   const year = d.getUTCFullYear()
   const month = String(d.getUTCMonth() + 1).padStart(2, '0')
   const day = String(d.getUTCDate()).padStart(2, '0')
@@ -31,7 +40,7 @@ function toIsoDateString(d: Date): string {
 }
 
 /** The Monday (UTC midnight) of the ISO week containing `d`. All week math goes through here. */
-function getIsoWeekStart(d: Date): Date {
+const getIsoWeekStart = (d: Date): Date => {
   const dayOfWeek = d.getUTCDay() // 0 = Sunday .. 6 = Saturday
   const offsetToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
   const monday = new Date(d)
@@ -44,7 +53,7 @@ function getIsoWeekStart(d: Date): Date {
  * ISO-8601 week-numbering year and week for `d`. The ISO year is the year of that week's
  * Thursday, which keeps late-December and early-January dates in one week rather than two.
  */
-function getIsoWeek(d: Date): { isoYear: number; isoWeek: number } {
+const getIsoWeek = (d: Date): { isoYear: number; isoWeek: number } => {
   const weekStart = getIsoWeekStart(d)
 
   const thursday = new Date(weekStart)
@@ -58,7 +67,7 @@ function getIsoWeek(d: Date): { isoYear: number; isoWeek: number } {
   return { isoYear, isoWeek }
 }
 
-export function getPeriodKey(date: string, period: GroupingPeriod): string {
+export const getPeriodKey = (date: string, period: GroupingPeriod): string => {
   const d = parseIsoDate(date)
 
   if (period === 'monthly') {
@@ -69,7 +78,7 @@ export function getPeriodKey(date: string, period: GroupingPeriod): string {
   return `${isoYear}-W${String(isoWeek).padStart(2, '0')}`
 }
 
-export function getPeriodLabel(date: string, period: GroupingPeriod): string {
+export const getPeriodLabel = (date: string, period: GroupingPeriod): string => {
   const d = parseIsoDate(date)
 
   if (period === 'monthly') {
@@ -81,7 +90,7 @@ export function getPeriodLabel(date: string, period: GroupingPeriod): string {
 }
 
 /** Subtracts whole months, clamping the day to the target month's length (Mar 31 → Feb 28). */
-function subtractMonths(d: Date, months: number): Date {
+const subtractMonths = (d: Date, months: number): Date => {
   const result = new Date(d)
   const targetDay = d.getUTCDate()
   result.setUTCDate(1)
@@ -94,10 +103,10 @@ function subtractMonths(d: Date, months: number): Date {
 }
 
 /** Resolves a relative preset into inclusive `YYYY-MM-DD` bounds. `now` is injected, not read. */
-export function computePresetRange(
+export const computePresetRange = (
   preset: RelativeDatePreset,
   now: Date,
-): { startDate: string; endDate: string } {
+): { startDate: string; endDate: string } => {
   const end = new Date(now)
   end.setUTCHours(0, 0, 0, 0)
 

@@ -1,13 +1,8 @@
 import { useAppDispatch, useAppSelector } from '../../../app/hooks'
 import { selectFilters } from '../selectors'
 import { setAmountRange } from '../transactionsSlice'
+import { parseNumberOrNull } from '../format'
 import { DebouncedInput } from '../../../components/DebouncedInput'
-
-/** An empty, absent, or unparseable field all mean "no bound". */
-const toAmount = (value: string | null): number | null => {
-  const parsed = Number.parseFloat(value ?? '')
-  return Number.isFinite(parsed) ? parsed : null
-}
 
 export function AmountFilter() {
   const dispatch = useAppDispatch()
@@ -26,7 +21,7 @@ export function AmountFilter() {
           placeholder="0"
           describedBy="amount-range-desc"
           value={min === null ? null : String(min)}
-          onCommit={(value) => dispatch(setAmountRange({ min: toAmount(value), max }))}
+          onCommit={(value) => dispatch(setAmountRange({ min: parseNumberOrNull(value), max }))}
         />
         <DebouncedInput
           id="amount-max"
@@ -36,7 +31,7 @@ export function AmountFilter() {
           placeholder="0"
           describedBy="amount-range-desc"
           value={max === null ? null : String(max)}
-          onCommit={(value) => dispatch(setAmountRange({ min, max: toAmount(value) }))}
+          onCommit={(value) => dispatch(setAmountRange({ min, max: parseNumberOrNull(value) }))}
         />
       </div>
 

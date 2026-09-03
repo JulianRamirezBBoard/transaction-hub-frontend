@@ -20,6 +20,7 @@ export function GroupingToggle() {
       <RadioPillGroup
         name="grouping"
         label="Group by"
+        standalone={false}
         options={GROUPING_PERIOD_OPTIONS}
         value={grouping}
         onChange={(period) => dispatch(setGrouping(period))}

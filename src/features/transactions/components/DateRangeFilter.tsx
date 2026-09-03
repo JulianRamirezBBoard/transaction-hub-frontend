@@ -13,17 +13,19 @@ export function DateRangeFilter() {
     <fieldset className="border border-gray-300 rounded-lg p-4">
       <legend className="px-2 text-sm font-semibold text-gray-900">Date Range</legend>
 
-      <div className="mb-4">
+      <fieldset className="mb-4">
+        <legend className="sr-only">Date range presets</legend>
         <RadioPillGroup
           name="datePreset"
           label="Date range presets"
+          standalone={false}
           options={DATE_PRESETS}
           value={preset}
           onChange={(value) => dispatch(setDateRangePreset(value))}
           getLabel={(value) => DATE_PRESET_LABELS[value]}
           getShortLabel={(value) => MOBILE_DATE_PRESET_LABELS[value]}
         />
-      </div>
+      </fieldset>
 
       {preset === 'custom' && (
         <div className="grid grid-cols-2 gap-3 mb-3">

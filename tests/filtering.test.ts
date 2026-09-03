@@ -124,6 +124,18 @@ describe('hasActiveFilters', () => {
     expect(hasActiveFilters(makeFilters({ logic: 'OR' }))).toBe(false)
   })
 
+  it('does not count the "custom" preset until a start or end date is set', () => {
+    const customNoDates = makeFilters({
+      dateRange: { preset: 'custom', startDate: null, endDate: null },
+    })
+    expect(hasActiveFilters(customNoDates)).toBe(false)
+
+    const customWithStart = makeFilters({
+      dateRange: { preset: 'custom', startDate: '2026-07-01', endDate: null },
+    })
+    expect(hasActiveFilters(customWithStart)).toBe(true)
+  })
+
   it.each([
     ['a preset', makeFilters({ dateRange: { preset: 'last30', startDate: null, endDate: null } })],
     [

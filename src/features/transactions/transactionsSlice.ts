@@ -10,9 +10,10 @@ import type {
   PageSizeOption,
   TransactionsState,
 } from './types'
-import { clampPage } from './logic'
+import { normalizePageInput } from './logic'
 
-const initialFiltersState: FiltersState = {
+/** A fresh filters object every call, so no reducer mutates a shared constant. */
+const makeInitialFilters = (): FiltersState => ({
   logic: 'AND',
   dateRange: {
     preset: null,
@@ -24,7 +25,7 @@ const initialFiltersState: FiltersState = {
     min: null,
     max: null,
   },
-}
+})
 
 const initialPaginationState: PaginationState = {
   page: 1,
@@ -32,9 +33,14 @@ const initialPaginationState: PaginationState = {
 }
 
 const initialState: TransactionsState = {
-  filters: initialFiltersState,
+  filters: makeInitialFilters(),
   grouping: 'monthly',
   pagination: initialPaginationState,
+}
+
+/** Changing *what* is shown sends the user back to the first page. One home for that rule. */
+const resetPage = (pagination: PaginationState) => {
+  pagination.page = 1
 }
 
 /**
@@ -50,7 +56,7 @@ export const transactionsSlice = createSlice({
       // Concrete bounds are derived from the preset at query time, so clear any stale ones.
       state.filters.dateRange.startDate = null
       state.filters.dateRange.endDate = null
-      state.pagination.page = 1
+      resetPage(state.pagination)
     },
 
     setCustomDateRange: (
@@ -60,7 +66,7 @@ export const transactionsSlice = createSlice({
       state.filters.dateRange.preset = 'custom'
       state.filters.dateRange.startDate = action.payload.startDate
       state.filters.dateRange.endDate = action.payload.endDate
-      state.pagination.page = 1
+      resetPage(state.pagination)
     },
 
     toggleCategory: (state, action: PayloadAction<TransactionCategory>) => {
@@ -70,17 +76,17 @@ export const transactionsSlice = createSlice({
       } else {
         state.filters.categories.push(action.payload)
       }
-      state.pagination.page = 1
+      resetPage(state.pagination)
     },
 
     setAmountRange: (state, action: PayloadAction<{ min: number | null; max: number | null }>) => {
       state.filters.amountRange = action.payload
-      state.pagination.page = 1
+      resetPage(state.pagination)
     },
 
     setFilterLogic: (state, action: PayloadAction<FilterLogic>) => {
       state.filters.logic = action.payload
-      state.pagination.page = 1
+      resetPage(state.pagination)
     },
 
     setGrouping: (state, action: PayloadAction<GroupingPeriod>) => {
@@ -89,18 +95,18 @@ export const transactionsSlice = createSlice({
 
     setPage: (state, action: PayloadAction<number>) => {
       // The store can't know `totalPages`, so `paginate` applies the upper bound.
-      state.pagination.page = clampPage(action.payload, Number.POSITIVE_INFINITY)
+      state.pagination.page = normalizePageInput(action.payload)
     },
 
     setPageSize: (state, action: PayloadAction<PageSizeOption>) => {
       state.pagination.pageSize = action.payload
-      state.pagination.page = 1
+      resetPage(state.pagination)
     },
 
     /** Resets the filters only. Grouping and page-size choices are preserved. */
     clearAllFilters: (state) => {
-      state.filters = initialFiltersState
-      state.pagination.page = 1
+      state.filters = makeInitialFilters()
+      resetPage(state.pagination)
     },
   },
 })

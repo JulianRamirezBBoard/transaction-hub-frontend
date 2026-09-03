@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useDebouncedCallback } from '../hooks/useDebouncedCallback'
+import { useDebouncedDraft } from '../hooks/useDebouncedDraft'
 
 interface DebouncedInputProps {
   id: string
@@ -32,20 +31,11 @@ export function DebouncedInput({
   describedBy,
   step,
 }: DebouncedInputProps) {
-  const [draft, setDraft] = useState(value ?? '')
-  const [syncedValue, setSyncedValue] = useState(value)
-
-  if (value !== syncedValue) {
-    setSyncedValue(value)
-    setDraft(value ?? '')
-  }
-
-  const commit = useDebouncedCallback(onCommit, delayMs)
-
-  const handleChange = (next: string) => {
-    setDraft(next)
-    commit(next === '' ? null : next)
-  }
+  const { draft, setDraft } = useDebouncedDraft<string | null, string>(
+    value,
+    (next) => onCommit(next === '' ? null : next),
+    { delayMs, toDraft: (external) => external ?? '' },
+  )
 
   return (
     <div>
@@ -60,7 +50,7 @@ export function DebouncedInput({
         placeholder={placeholder}
         step={step}
         aria-describedby={describedBy}
-        onChange={(e) => handleChange(e.target.value)}
+        onChange={(e) => setDraft(e.target.value)}
       />
     </div>
   )

@@ -32,6 +32,13 @@ const AMOUNT_CLASSES: Record<TransactionKind, string> = {
   neutral: 'text-gray-700',
 }
 
+/** Spoken label so the credit/expense split does not depend on text colour alone. */
+const KIND_LABELS: Record<TransactionKind, string> = {
+  income: 'credit',
+  expense: 'debit',
+  neutral: 'no change',
+}
+
 export function TransactionRow({ transaction }: TransactionRowProps) {
   const kind = getTransactionKind(transaction.amount)
 
@@ -48,7 +55,10 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
           {transaction.category}
         </span>
       </td>
-      <td className={`text-right ${AMOUNT_CLASSES[kind]}`}>{formatCurrency(transaction.amount)}</td>
+      <td className={`text-right ${AMOUNT_CLASSES[kind]}`}>
+        <span className="sr-only">{KIND_LABELS[kind]} </span>
+        {formatCurrency(transaction.amount)}
+      </td>
       <td className="text-right text-gray-600">{formatCurrency(transaction.runningTotal)}</td>
     </tr>
   )

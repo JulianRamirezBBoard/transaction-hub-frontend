@@ -21,28 +21,29 @@ export function TransactionGroupSection({ group }: TransactionGroupSectionProps)
               )}
             </h3>
           </div>
-          <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
+          <dl className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
             <div className="min-w-0">
-              <div className="text-gray-600 truncate">Count:</div>
-              <div className="font-semibold text-gray-900 truncate">{summary.transactionCount}</div>
+              <dt className="text-gray-600 truncate">Count</dt>
+              <dd className="font-semibold text-gray-900 truncate">{summary.transactionCount}</dd>
             </div>
             <div className="min-w-0">
-              <div className="text-gray-600 truncate">Total:</div>
-              <div className="font-semibold text-gray-900 truncate">
+              <dt className="text-gray-600 truncate">Total</dt>
+              <dd className="font-semibold text-gray-900 truncate">
                 {formatCurrency(summary.totalAmount)}
-              </div>
+              </dd>
             </div>
             <div className="min-w-0">
-              <div className="text-gray-600 truncate">Average:</div>
-              <div className="font-semibold text-gray-900 truncate">
+              <dt className="text-gray-600 truncate">Average</dt>
+              <dd className="font-semibold text-gray-900 truncate">
                 {formatCurrency(summary.averageAmount)}
-              </div>
+              </dd>
             </div>
-          </div>
+          </dl>
         </div>
 
         <div className="overflow-x-auto">
           <table className="table">
+            <caption className="sr-only">Transactions for {summary.periodLabel}</caption>
             <thead>
               <tr>
                 <th scope="col">Date</th>
